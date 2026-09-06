@@ -1,0 +1,22 @@
+# MIMIR — pinned to versions verified working on Python 3.14.3 / Windows 11.
+# Verified 2026-09-05 against RTX 3060 Ti, pywin32 cp314 wheel confirmed.
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+pydantic-settings==2.15.0
+python-dotenv==1.2.3
+pyyaml==6.0.3
+httpx==0.28.1
+
+typer==0.27.2
+rich==15.0.0
+
+psutil==7.2.2
+nvidia-ml-py==13.610.43
+
+# Tier 2 control — installed now, exercised in Phase 3
+uiautomation==2.0.29
+pywin32==312
+
+pytest==9.0.1

@@ -1,0 +1,26 @@
+# MIMIR — runtime state lives in C:\MIMIR (parent), never here.
+# These entries are belt-and-braces in case anything is ever written in-repo.
+
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Runtime data — must never reach GitHub
+data/
+logs/
+journal/
+sessions/
+models/
+*.db
+*.sqlite3
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

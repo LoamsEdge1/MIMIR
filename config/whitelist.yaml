@@ -1,0 +1,37 @@
+# MIMIR permission whitelist.
+#
+# Gate logic requirement: resolve every target to an absolute real path
+# FIRST, then check roots and exclusions. A whitelist checked by string
+# prefix is not a whitelist — path traversal and symlinks must be rejected
+# explicitly.
+#
+# PLACEHOLDER exclusions. Replaced with the real list in Phase 3.
+
+roots:
+  - "C:\\Users\\loams"
+  - "C:\\MIMIR"
+
+exclusions:
+  - "C:\\Users\\loams\\.ssh"
+  - "C:\\Users\\loams\\.aws"
+  - "C:\\Users\\loams\\.claude"
+  - "C:\\Users\\loams\\AppData\\Roaming\\Microsoft\\Credentials"
+  - "C:\\Users\\loams\\AppData\\Local\\Microsoft\\Credentials"
+  - "C:\\MIMIR\\MIMIR\\.env"
+  - "C:\\MIMIR\\MIMIR\\.git"
+
+# Separate project — explicitly out of bounds per the isolation rule.
+  - "C:\\JARVIS"
+
+# Actions that ALWAYS require confirmation, even inside the whitelist.
+always_confirm:
+  - run_powershell
+  - delete_to_recycle
+  - write_file
+
+# Actions that are never permitted at any tier.
+never:
+  - enter_credentials
+  - make_purchase
+  - modify_system_settings
+  - permanent_delete

@@ -1,0 +1,53 @@
+# MIMIR configuration — single source of truth.
+# No path or model name is ever hardcoded in src/.
+
+data_root: "C:\\MIMIR"
+
+models:
+  # Local tier. Confirmed after the Phase 2 step 3 benchmark.
+  local: "qwen2.5:7b-instruct-q4_K_M"
+  local_alt: "llama3.1:8b-instruct-q4_K_M"
+  embed: "nomic-embed-text"
+  # Cloud ladder — all three verified working via claude -p
+  rung_1: "claude-haiku-4-5"
+  rung_2: "claude-sonnet-5"
+  rung_3: "claude-opus-5"
+
+routing:
+  confidence_threshold: 0.75
+  hard_task_classes: [code, analysis, vision, multistep, financial]
+  daily_escalation_warn: 25
+  cloud_timeout_seconds: 120
+
+control:
+  tier_order: [scripted, uia, vision]
+  uia_enabled: false      # Phase 3
+  vision_enabled: false   # Phase 3
+
+game_mode:
+  poll_seconds: 5
+  gpu_memory_threshold_mb: 1500
+  debounce_polls: 2
+  always_games: []
+  never_games: []
+
+persona:
+  address: "brother"
+  address_frequency: sparing
+  max_character_sentences: 1
+  disabled_for: [deliverable, code, analysis, document]
+
+modes:
+  default: silent
+
+daemon:
+  host: "127.0.0.1"
+  port: 8756
+
+orb_states:
+  idle:       { emergence: 0.5, scale: 13, speed: 1.5, detail: 3.0, bloom: 0.5 }
+  listening:  { emergence: 0.3, scale: 22, speed: 2.7, detail: 4.4, bloom: 0.4 }
+  processing: { emergence: 0.8, scale: 16, speed: 4.0, detail: 6.0, bloom: 0.8 }
+  speaking:   { emergence: 0.6, scale: 17, speed: 3.0, detail: 5.0, bloom: 0.6 }
+  error:      { emergence: 0.9, scale: 18, speed: 0.5, detail: 2.0, bloom: 0.6 }
+  offline:    { emergence: 0.3, scale: 22, speed: 2.7, detail: 4.4, bloom: 0.4 }
