@@ -20,7 +20,19 @@ models:
   rung_3: "claude-opus-5"
 
 routing:
-  confidence_threshold: 0.75
+  # Self-reported confidence is NOT trusted. Benchmark 2026-09-08 found both
+  # local models are as confident when wrong as when right (qwen 0.92 right /
+  # 0.94 wrong; llama 0.85 / 0.84). A number that does not correlate with
+  # correctness is not a safety mechanism, so the gate is off.
+  #
+  # Escalation instead relies on signals that cannot be faked:
+  #   - deterministic chaining pre-check (router/chaining.py)
+  #   - hard_task_classes below
+  #   - stage 3 target resolution failure  <- the real uncertainty signal
+  #   - stage 6 verification failure
+  confidence_gate_enabled: false
+  confidence_threshold: 0.75          # retained for logging only
+  escalate_on_unresolved_target: true
   hard_task_classes: [code, analysis, vision, multistep, financial]
   daily_escalation_warn: 25
   cloud_timeout_seconds: 120
