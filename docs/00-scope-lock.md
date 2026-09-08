@@ -122,6 +122,24 @@ Free rein inside. Confirmation required outside.
 
 **Required Phase 3 deliverable:** an explicit exclusion list. Vague exclusions are how accidents happen.
 
+### Cloud tool scoping — measured, not assumed
+
+Measured on Claude Code 2.1.263, 2026-09-08, via three probe calls:
+
+| Flags | Result |
+|---|---|
+| `--allowedTools ""` | **Still read the file — does NOT restrict** |
+| `--disallowedTools "*"` | No tools offered |
+| `--allowedTools "Read"` + deny `"*"` | No tools offered (deny wins) |
+
+`--allowedTools` is an allow-list layered **on top of** Claude Code's defaults,
+not an exclusive one, and it cannot be combined with a wildcard deny.
+
+**Consequences:**
+1. Cloud calls deny all tools by default. Granting none is the only way to grant nothing.
+2. Granting *any* tool means Claude Code's default read-only access rides along. That residual is the price of granting one tool at all.
+3. **MIMIR's gate is authoritative.** Cloud-side tool scoping is not a security boundary and must never be treated as one.
+
 ### Standing orders
 A persistent policy system. The user sets a directive once and it silently governs MIMIR's behavior thereafter (e.g. "never touch anything in this folder," "always confirm before touching tax documents"). Active standing orders are visible on the dashboard.
 
