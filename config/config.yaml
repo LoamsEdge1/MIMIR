@@ -4,9 +4,14 @@
 data_root: "C:\\MIMIR"
 
 models:
-  # Local tier. Confirmed after the Phase 2 step 3 benchmark.
+  # Rung 0. Benchmark 2026-09-08, re-run after the sharpened classifier prompt
+  # and the deterministic chaining pre-check:
+  #   qwen2.5:7b  100.0% accuracy, 75.6 tok/s   <- chosen
+  #   llama3.1:8b  93.8% accuracy, 72.6 tok/s
+  # Both 100% valid JSON. Qwen won on accuracy AND speed once the prompt was
+  # fixed — the first run's result was a prompt problem, not a model problem.
   local: "qwen2.5:7b-instruct-q4_K_M"
-  local_alt: "llama3.1:8b"          # already present locally, Q4_K_M, 4.9 GB
+  local_alt: "llama3.1:8b"
   embed: "nomic-embed-text"
   embed_alt: "bge-m3"               # already local; larger, stronger, costs more VRAM
   # Cloud ladder — all three verified working via claude -p

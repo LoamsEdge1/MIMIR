@@ -125,6 +125,7 @@ Every request runs the same six-stage pipeline:
 
 | Stage | Action |
 |---|---|
+| 0. Pre-check | **Deterministic chaining detection.** Structural, no model. Forces `multistep` when the request chains side-effecting work. |
 | 1. Classify | Local model tags intent and task class, emits structured JSON |
 | 2. Select tier | Task class + confidence + game-mode state → rung 0–3 |
 | 3. Resolve targets | Files, apps, tickers verified to exist. **Never assumed.** |
