@@ -59,11 +59,19 @@ Real calls are slow and consume budget. Keep them to one, mock the rest.
 - **One real call** to `claude-haiku-4-5` — cheapest rung — asserting
   `ok: True` and non-empty text. Skip if `claude` is not on PATH.
 
+## Carried over from step 2
+
+`local.health()` returns `vram_mb: None` when the model is unloaded. Confirm it
+returns an actual integer when the model IS loaded, and add a test covering
+both states. The dashboard's system panel displays this value, so a field that
+is always `None` is a dead field.
+
 ## Done when
 
 - All tests pass
 - A real haiku call returns text
 - Counters persist across restart, verified by test not inspection
+- `local.health()` reports real VRAM when loaded, with a test for each state
 
 ## Stop here
 
