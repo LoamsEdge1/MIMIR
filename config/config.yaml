@@ -6,8 +6,9 @@ data_root: "C:\\MIMIR"
 models:
   # Local tier. Confirmed after the Phase 2 step 3 benchmark.
   local: "qwen2.5:7b-instruct-q4_K_M"
-  local_alt: "llama3.1:8b-instruct-q4_K_M"
+  local_alt: "llama3.1:8b"          # already present locally, Q4_K_M, 4.9 GB
   embed: "nomic-embed-text"
+  embed_alt: "bge-m3"               # already local; larger, stronger, costs more VRAM
   # Cloud ladder — all three verified working via claude -p
   rung_1: "claude-haiku-4-5"
   rung_2: "claude-sonnet-5"
