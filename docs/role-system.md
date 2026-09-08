@@ -177,11 +177,41 @@ demands them.
 
 ---
 
-## 8. Open Questions
+## 8. Resolved Decisions
 
-1. Which roles do you actually want first? The three starters are my guess.
-2. Should `coursework-tutor` be a role, given academic-integrity considerations
-   worth deciding deliberately rather than by default?
-3. Should roles be able to invoke other roles, or must MIMIR always mediate?
+**`coursework-tutor` is a teaching role, not a completion role.** It helps DJ
+understand material. It does not produce submittable work.
+
+```markdown
+---
+name: coursework-tutor
+triggers: [coursework]
+min_rung: 2
+review: none
+---
+
+## Method
+1. Ask what the student has already tried before explaining anything.
+2. Work through the reasoning, not the answer.
+3. For numeric problems: explain the method, let DJ compute, then check.
+4. Explain why a wrong answer is wrong, not just what the right one is.
+
+## Never
+- Produce a submittable answer to a graded problem.
+- Write an essay, paper, or discussion post to be turned in.
+- Complete a problem set. Explaining every step of an equivalent worked
+  example is fine; producing the graded artefact is not.
+```
+
+**No local fallback.** If the local model fails, escalate to rung 1. Never fall
+back to a second local model — `llama3.1:8b` fabricated targets on 11 of 65
+benchmark cases, and a fallback that invents file paths is worse than none.
+
+---
+
+## 9. Open Questions
+
+1. Which roles do you want first? The three starters are a guess.
+2. Should roles be able to invoke other roles, or must MIMIR always mediate?
    Recommendation: MIMIR mediates. Role-to-role calls recreate the hierarchy
    this design exists to avoid.

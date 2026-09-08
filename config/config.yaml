@@ -11,7 +11,13 @@ models:
   # Both 100% valid JSON. Qwen won on accuracy AND speed once the prompt was
   # fixed — the first run's result was a prompt problem, not a model problem.
   local: "qwen2.5:7b-instruct-q4_K_M"
-  local_alt: "llama3.1:8b"
+
+  # NOT a fallback. Benchmark comparison only.
+  # llama3.1:8b fabricated targets on 11 of 65 cases, including inventing
+  # "MIMIR" and "chrome" for prompts that named neither. A fallback that
+  # invents file paths is worse than no fallback, so there isn't one:
+  # if the local model fails, escalate. See on_local_failure below.
+  benchmark_alt: "llama3.1:8b"
   embed: "nomic-embed-text"
   embed_alt: "bge-m3"               # already local; larger, stronger, costs more VRAM
   # Cloud ladder — all three verified working via claude -p
@@ -33,6 +39,7 @@ routing:
   confidence_gate_enabled: false
   confidence_threshold: 0.75          # retained for logging only
   escalate_on_unresolved_target: true
+  on_local_failure: escalate_rung_1   # never fall back to another local model
   hard_task_classes: [code, analysis, vision, multistep, financial]
   daily_escalation_warn: 25
   cloud_timeout_seconds: 120
