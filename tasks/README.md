@@ -27,8 +27,8 @@ than dated — order matters more than date here.
 | 1 | Repo skeleton, config, logging | done (in chat) |
 | 2 | `llm/local.py` — Ollama client | done |
 | 3 | Local model benchmark | done (in chat) |
-| 4 | `llm/cloud.py` — `claude -p` wrapper | **next** |
-| 5 | Daemon, queue, state | not written |
+| 4 | `llm/cloud.py` — `claude -p` wrapper | done |
+| 5 | Daemon, queue, state | **next** |
 | 6 | Router stages 0-2, 6 | not written |
 | 7 | Scripted control, registry, journal | not written |
 | 8 | Gate and whitelist enforcement | not written |

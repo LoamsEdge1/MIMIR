@@ -155,11 +155,28 @@ def test_load_after_unload_restores_a_working_model(client):
 
 
 @ollama_up
-def test_health_reports_up(client):
+def test_health_reports_real_vram_when_loaded(client):
+    """
+    The dashboard's system panel renders this number. A field that is always
+    None is a dead field, so assert an actual integer footprint rather than
+    'int or None'.
+    """
+    client.load()
     status = client.health()
     assert status["reachable"] is True
     assert status["model_present"] is True
-    assert status["vram_mb"] is None or isinstance(status["vram_mb"], int)
+    assert isinstance(status["vram_mb"], int)
+    assert status["vram_mb"] > local._VRAM_CHECK_FLOOR_MB
+
+
+@ollama_up
+def test_health_reports_no_vram_when_unloaded(client):
+    """The other state: reachable and installed, but holding nothing."""
+    client.unload()
+    status = client.health()
+    assert status["reachable"] is True
+    assert status["model_present"] is True
+    assert status["vram_mb"] is None
 
 
 def test_health_reports_unreachable_without_raising():

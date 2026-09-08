@@ -147,9 +147,22 @@ Binds to `127.0.0.1` only. No external interface this phase.
 
 ### `llm/cloud.py`
 ```
-run(prompt, rung, allowed_tools=None, session_id=None, timeout=120) -> dict
+run(prompt, rung, allowed_tools=None, session_id=None, timeout=None) -> dict
+        # {"text", "ok", "rung", "session_id", "error", "seconds"}
+escalation_counts() -> dict[int, int]
+reset_daily_counts() -> None
 ```
-Builds: `claude -p <prompt> --model <config.models[rung]> --output-format json`. Appends `--allowedTools` when scoped, `--resume <id>` for continuity. Runs via `subprocess.run` with `shell=False` and an explicit timeout. Parses JSON; a non-zero exit is an error result, never a silent empty string. **Increments the escalation counter for that rung on every call.**
+Builds: `claude -p --model <config.models[rung_N]> --output-format json --strict-mcp-config`, then the prompt after `--` so a prompt beginning with a dash stays text. Appends `--resume <id>` for continuity. Runs via `subprocess.run` with `shell=False` and an explicit timeout defaulting to `routing.cloud_timeout_seconds`. Parses JSON; a non-zero exit, an `is_error` body, a timeout, a missing CLI and an unparseable response are all `ok: False` with a populated `error` and an empty `text` — never a silent empty string, and never the CLI's own error prose passed off as an answer. **Increments the escalation counter for that rung before every call, failures included**, persisted to `{data_root}/data/escalations.json` so the daily budget survives a restart. Warns at `routing.daily_escalation_warn`; never blocks.
+
+**Tool scoping, measured on Claude Code 2.1.263 (2026-09-08).** Three probe calls asking `claude-haiku-4-5` to read a file:
+
+| flags | outcome |
+|---|---|
+| `--allowedTools ""` | read the file — does **not** restrict |
+| `--disallowedTools "*"` | no tools offered |
+| `--allowedTools "Read"` + `--disallowedTools "*"` | no tools offered — deny wins |
+
+So `--allowedTools` is an allow-list layered on Claude Code's own defaults, not an exclusive one, and it cannot be combined with a wildcard deny. A call with no scoped tools therefore sends `--disallowedTools "*"` and gets no tools at all; a call that scopes a set accepts that Claude Code's default read-only access rides along. MIMIR's gate stays authoritative either way, which is why the default grants nothing.
 
 ### `llm/local.py`
 ```
