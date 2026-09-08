@@ -81,7 +81,8 @@ Every file to create. Nothing else.
 ### Router
 | Path | Purpose |
 |---|---|
-| `src/mimir/router/pipeline.py` | Orchestrates the six stages in order |
+| `src/mimir/router/pipeline.py` | Orchestrates the seven stages in order |
+| `src/mimir/router/chaining.py` | Stage 0 — deterministic chaining pre-check, no model |
 | `src/mimir/router/classify.py` | Stage 1 — local model emits intent + task class as JSON |
 | `src/mimir/router/tiers.py` | Stage 2 — rung selection from task class, confidence, game state |
 | `src/mimir/router/resolve.py` | Stage 3 — verify every file, path, app target actually exists |
@@ -152,10 +153,22 @@ Builds: `claude -p <prompt> --model <config.models[rung]> --output-format json`.
 
 ### `llm/local.py`
 ```
-generate(prompt, json_schema=None) -> dict
-unload() -> None          # keep_alive=0, frees VRAM
+generate(prompt, system=None, json_mode=False, timeout=180) -> dict
+        # {"text": str, "tokens_per_sec": float, "seconds": float}
+generate_json(prompt, system=None) -> dict | None
+        # None on unparseable output. Never repaired, never retried.
+classify(prompt) -> dict | None      # under config/classifier_prompt.txt
 load() -> None
+unload() -> None          # keep_alive=0, frees VRAM
+is_loaded() -> bool
+health() -> dict          # {"reachable", "model_present", "vram_mb"}
 ```
+Model, host and keep-alive come from `config.yaml`; there are no literals in
+the module. `unload()` verifies release twice — Ollama must drop the model from
+`/api/ps`, and `pynvml` must show device VRAM fall. A clean return that freed
+nothing raises `VramNotReleased`, because game mode depends on the memory
+actually coming back. An unreachable Ollama is reported by `health()`, not
+raised — the router escalates to rung 1 and never tries a second local model.
 
 ### `router/classify.py`
 Returns:
@@ -241,7 +254,7 @@ Each step ships working before the next begins.
 | 3 | Benchmark | Tokens/sec and classification accuracy recorded for Qwen 7B and Llama 8B. **Winner written into config.** |
 | 4 | `llm/cloud.py` | Returns parsed output from all three rungs; timeout and non-zero exit handled |
 | 5 | Daemon + queue + state | Server runs, `/api/status` responds, jobs queue and complete |
-| 6 | Router stages 1, 2, 6 | Classifies, selects a rung, verifies. No control layer yet. |
+| 6 | Router stages 0, 1, 2, 6 | Pre-checks chaining, classifies, selects a rung, verifies. No control layer yet. |
 | 7 | `control/scripted.py` + registry + journal | All tier-1 actions work, each journalled and reversible |
 | 8 | Gate + whitelist | In-whitelist acts freely, out-of-whitelist queues a confirmation |
 | 9 | Game watchdog | Launching a game unloads the model; exiting restores it |

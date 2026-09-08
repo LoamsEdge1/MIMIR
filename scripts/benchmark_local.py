@@ -32,24 +32,23 @@ import json
 import re
 import statistics
 import sys
-import time
 from datetime import date
 from pathlib import Path
 
-import httpx
-import yaml
-
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "config" / "config.yaml"
-PROMPT = REPO / "config" / "classifier_prompt.txt"
 
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 from bench_cases import CASES, HALLUCINATION_PROBES  # noqa: E402
+from mimir import config  # noqa: E402
+from mimir.llm import local  # noqa: E402
 from mimir.router.chaining import apply as apply_chaining  # noqa: E402
 
-SYSTEM = PROMPT.read_text(encoding="utf-8")
+# The benchmark drives the same client the router does. Two code paths to the
+# same service drift, and then the benchmark measures something that never
+# ships. The classifier prompt comes from config for the same reason.
+SYSTEM = config.classifier_prompt()
 
 
 def expected_rung(task_class, confidence, cfg):
@@ -84,33 +83,19 @@ def invented_targets(prompt, targets):
     return bad
 
 
-def ollama(host, model, prompt, timeout=180):
-    t0 = time.perf_counter()
-    r = httpx.post(
-        f"{host}/api/generate",
-        json={
-            "model": model,
-            "system": SYSTEM,
-            "prompt": prompt,
-            "format": "json",
-            "stream": False,
-            "options": {"temperature": 0},
-        },
-        timeout=timeout,
-    )
-    r.raise_for_status()
-    d = r.json()
-    wall = time.perf_counter() - t0
-    ec, ed = d.get("eval_count", 0), d.get("eval_duration", 0)
-    return d.get("response", ""), (ec / (ed / 1e9)) if ed else 0.0, wall
+def classify(client, prompt):
+    """One classification through the shipping client. Returns (text, tok/s, wall)."""
+    r = client.generate(prompt, system=SYSTEM, json_mode=True)
+    return r["text"], r["tokens_per_sec"], r["seconds"]
 
 
-def score(model, host, cfg):
+def score(model, cfg):
     print(f"\n  {model}  ({len(CASES)} cases + {len(HALLUCINATION_PROBES)} probes)")
 
+    client = local.LocalClient(model=model)
     try:
-        ollama(host, model, "warmup", timeout=300)
-    except Exception as e:
+        client.load()
+    except local.LocalLLMError as e:
         print(f"  FAILED to load: {e}")
         return None
 
@@ -121,20 +106,17 @@ def score(model, host, cfg):
 
     for prompt, gold in CASES:
         try:
-            text, tps, wall = ollama(host, model, prompt)
-        except Exception as e:
+            text, tps, wall = classify(client, prompt)
+        except local.LocalLLMError as e:
             misses.append((prompt, gold, f"error: {e}"))
             continue
         speeds.append(tps)
         walls.append(wall)
 
-        try:
-            obj = json.loads(text)
-        except json.JSONDecodeError:
+        # parse_json is the router's own parser — same None-on-garbage rule.
+        obj = local.parse_json(text)
+        if obj is None:
             misses.append((prompt, gold, "invalid json"))
-            continue
-        if not isinstance(obj, dict):
-            misses.append((prompt, gold, "not an object"))
             continue
 
         valid += 1
@@ -168,13 +150,22 @@ def score(model, host, cfg):
     probe_invented = []
     for prompt in HALLUCINATION_PROBES:
         try:
-            text, _, _ = ollama(host, model, prompt)
-            obj = json.loads(text)
-            bad = invented_targets(prompt, obj.get("targets"))
-            if bad:
-                probe_invented.append((prompt, bad))
-        except Exception:
+            text, _, _ = classify(client, prompt)
+        except local.LocalLLMError:
             continue
+        obj = local.parse_json(text)
+        if obj is None:
+            continue
+        bad = invented_targets(prompt, obj.get("targets"))
+        if bad:
+            probe_invented.append((prompt, bad))
+
+    # Free the VRAM before the next candidate loads. Two 7-8B models resident
+    # at once does not fit in 8GB, and a swap mid-run would distort tok/s.
+    try:
+        client.unload()
+    except local.LocalLLMError as e:
+        print(f"  WARNING: {model} did not unload: {e}")
 
     n = len(CASES)
     return {
@@ -194,14 +185,18 @@ def score(model, host, cfg):
 
 
 def main():
-    cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
-    host = "http://127.0.0.1:11434"
-    candidates = [cfg["models"]["local"], cfg["models"]["local_alt"]]
+    cfg = config.load()
+    candidates = [config.get("models.local"), config.get("models.benchmark_alt")]
+
+    health = local.LocalClient().health()
+    if not health["reachable"]:
+        print(f"Ollama unreachable at {config.get('ollama.host')}. Is it running?")
+        sys.exit(1)
 
     print(f"MIMIR local benchmark — {', '.join(candidates)}")
-    results = [r for r in (score(m, host, cfg) for m in candidates) if r]
+    results = [r for r in (score(m, cfg) for m in candidates) if r]
     if not results:
-        print("\nNo model completed. Is Ollama running?")
+        print("\nNo model completed.")
         sys.exit(1)
 
     print("\n" + "=" * 78)
@@ -248,7 +243,7 @@ def main():
             for prompt, gold, got in r["misses"][:14]:
                 print(f"  want {gold:<12} got {got:<14} | {prompt[:42]}")
 
-    out = Path(cfg["data_root"]) / "logs" / f"benchmark-{date.today().isoformat()}.json"
+    out = config.data_root() / "logs" / f"benchmark-{date.today().isoformat()}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(f"\nSaved: {out}")

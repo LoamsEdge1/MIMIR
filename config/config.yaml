@@ -4,19 +4,23 @@
 data_root: "C:\\MIMIR"
 
 models:
-  # Rung 0. Benchmark 2026-09-08, re-run after the sharpened classifier prompt
-  # and the deterministic chaining pre-check:
-  #   qwen2.5:7b  100.0% accuracy, 75.6 tok/s   <- chosen
-  #   llama3.1:8b  93.8% accuracy, 72.6 tok/s
+  # Rung 0. Source: C:\MIMIR\logs\benchmark-2026-09-08.json, re-run
+  # 2026-09-08 16:08 through llm/local.py after the sharpened classifier
+  # prompt and the deterministic chaining pre-check:
+  #   qwen2.5:7b  93.0% accuracy, 76.1 tok/s, 1.8% under-escalation  <- chosen
+  #   llama3.1:8b 78.9% accuracy, 72.9 tok/s, 12.3% under-escalation
   # Both 100% valid JSON. Qwen won on accuracy AND speed once the prompt was
   # fixed — the first run's result was a prompt problem, not a model problem.
+  # The earlier figures here (100.0% / 93.8%) matched no logged run and have
+  # been replaced with the measured ones. Run 1 of the same day is kept at
+  # benchmark-2026-09-08-run1.json: 91.2% / 78.9%, one case apart.
   local: "qwen2.5:7b-instruct-q4_K_M"
 
   # NOT a fallback. Benchmark comparison only.
-  # llama3.1:8b fabricated targets on 11 of 65 cases, including inventing
-  # "MIMIR" and "chrome" for prompts that named neither. A fallback that
-  # invents file paths is worse than no fallback, so there isn't one:
-  # if the local model fails, escalate. See on_local_failure below.
+  # llama3.1:8b fabricated targets on 11 of 65 cases (57 + 8 probes),
+  # including inventing "MIMIR" and "chrome" for prompts that named neither.
+  # A fallback that invents file paths is worse than no fallback, so there
+  # isn't one: if the local model fails, escalate. See on_local_failure below.
   benchmark_alt: "llama3.1:8b"
   embed: "nomic-embed-text"
   embed_alt: "bge-m3"               # already local; larger, stronger, costs more VRAM
@@ -24,6 +28,20 @@ models:
   rung_1: "claude-haiku-4-5"
   rung_2: "claude-sonnet-5"
   rung_3: "claude-opus-5"
+
+ollama:
+  # Local inference host. Nothing in src/ carries this literal.
+  host: "http://127.0.0.1:11434"
+  # How long Ollama keeps the model in VRAM after a call. Game mode overrides
+  # this with keep_alive=0 through llm.local.unload().
+  keep_alive: "5m"
+  request_timeout_seconds: 180
+  load_timeout_seconds: 300      # cold pull into VRAM is slow on first call
+  unload_timeout_seconds: 30
+  # unload() raises if the model still holds VRAM after this settle window.
+  # Ollama drops the runner asynchronously; the driver reports the release a
+  # moment later.
+  unload_settle_seconds: 8
 
 routing:
   # Self-reported confidence is NOT trusted. Benchmark 2026-09-08 found both
